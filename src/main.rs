@@ -29,9 +29,10 @@ fn run_server () {
     }
 }
 
-fn run_client(ip: &str, w: u64, s: usize, n: u32) {
+fn run_client(ip: &str, w: u64, s: usize, n: usize) {
     let mut arr: Vec<u8> = Vec::with_capacity(s);
     let mut rsv: Vec<u8> = Vec::with_capacity(s + 1);
+    let mut times: Vec<f64> = Vec::with_capacity(n);
 
     for _ in 0..s {
         arr.push(0);
@@ -55,6 +56,7 @@ fn run_client(ip: &str, w: u64, s: usize, n: u32) {
 
         if rsv[0] == ((num + 1) & 0xff) as u8 {
             println!("[{:3}/{:3}]duration: {:12.6} ms", num, n, duration_to_ms(duration));
+            times.push(duration_to_ms(duration));
         }
         else {
             println!("TRY IS FAILED !!!");
@@ -62,6 +64,21 @@ fn run_client(ip: &str, w: u64, s: usize, n: u32) {
 
         thread::sleep(Duration::from_millis(w));
     }
+
+    let mut sum = 0.0;
+    let mut val_max = times[0];
+    let mut val_min = times[0];
+
+    for i in 0..n {
+        sum += times[i];
+
+        val_min = if val_min > times[i] { times[i] } else { val_min };
+        val_max = if val_max < times[i] { times[i] } else { val_max };
+    }
+    println!("REPORT:");
+    println!("   min: {:12.6} ms", val_min);
+    println!("   max: {:12.6} ms", val_max);
+    println!("  mean: {:12.6} ms", sum / n as f64);
 }
 
 fn main() {
@@ -100,7 +117,7 @@ fn main() {
         let ip: &str = matches.value_of("client").unwrap();
         let w: u64 = matches.value_of("wait").unwrap().parse().unwrap();
         let s: usize = matches.value_of("size").unwrap().parse().unwrap();
-        let n: u32 = matches.value_of("number").unwrap().parse().unwrap();
+        let n: usize = matches.value_of("number").unwrap().parse().unwrap();
 
         println!("            wait (ms): {:?}", w);
         println!(" package size (bytes): {:?}", s);
