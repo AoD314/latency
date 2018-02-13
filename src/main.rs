@@ -5,13 +5,11 @@ use std::net::UdpSocket;
 use std::thread;
 use std::time::{Duration, Instant};
 
-
-fn duration_to_ms(d: Duration) -> f64 {
-    d.subsec_nanos() as f64 / 1000000.0
+fn duration_to_ms(d: Duration) -> u32 {
+    d.subsec_nanos()
 }
 
 fn run_server () {
-
     let socket = UdpSocket::bind("0.0.0.0:5201").expect("couldn't bind to address");
 
     let mut buf = [0; 16384];
@@ -32,7 +30,7 @@ fn run_server () {
 fn run_client(ip: &str, w: u64, s: usize, n: usize) {
     let mut arr: Vec<u8> = Vec::with_capacity(s);
     let mut rsv: Vec<u8> = Vec::with_capacity(s + 1);
-    let mut times: Vec<f64> = Vec::with_capacity(n);
+    let mut times: Vec<u32> = Vec::with_capacity(n);
 
     for _ in 0..s {
         arr.push(0);
@@ -55,17 +53,19 @@ fn run_client(ip: &str, w: u64, s: usize, n: usize) {
         let duration = time.elapsed();
 
         if rsv[0] == ((num + 1) & 0xff) as u8 {
-            println!("[{:3}/{:3}]duration: {:12.6} ms", num, n, duration_to_ms(duration));
+            println!("[{:4}/{:4}] duration: {:12} ns", num, n, duration_to_ms(duration));
             times.push(duration_to_ms(duration));
         }
         else {
             println!("TRY IS FAILED !!!");
+            println!("arr: {:?}", arr);
+            println!("rsv: {:?}", rsv);
         }
 
         thread::sleep(Duration::from_millis(w));
     }
 
-    let mut sum = 0.0;
+    let mut sum = 0;
     let mut val_max = times[0];
     let mut val_min = times[0];
 
@@ -76,9 +76,9 @@ fn run_client(ip: &str, w: u64, s: usize, n: usize) {
         val_max = if val_max < times[i] { times[i] } else { val_max };
     }
     println!("REPORT:");
-    println!("   min: {:12.6} ms", val_min);
-    println!("   max: {:12.6} ms", val_max);
-    println!("  mean: {:12.6} ms", sum / n as f64);
+    println!("   min: {:12} ns", val_min);
+    println!("   max: {:12} ns", val_max);
+    println!("  mean: {:12} ns", (sum as f64 / n as f64) as u64);
 }
 
 fn main() {
@@ -91,19 +91,19 @@ fn main() {
             .help("run server"))
         .arg(Arg::with_name("client")
             .short("c")
-            .help("run client")
+            .help("run client - 127.0.0.1:5201")
             .takes_value(true))
         .arg(Arg::with_name("wait")
             .short("w")
-            .help("wait before send next package")
+            .help("wait before send next package(ms) - 25")
             .takes_value(true))
         .arg(Arg::with_name("size")
             .short("l")
-            .help("package size")
+            .help("package size(bytes) - 64")
             .takes_value(true))
         .arg(Arg::with_name("number")
             .short("n")
-            .help("number of request")
+            .help("number of request - 100")
             .takes_value(true))
         .get_matches();
 
